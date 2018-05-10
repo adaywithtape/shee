@@ -1,7 +1,7 @@
 #!/bin/bash
-#shee.sh v0.5
+#shee.sh v0.6
 #By TAPE
-#Last edit 20-11-2015 23:00
+#Last edit 10-05-2018 22:00
 #Written for the guys and gals at top-hat-sec ;)
 VERS=$(sed -n 2p $0 | awk '{print $2}')    #Version information
 LED=$(sed -n 4p $0 | awk '{print $3 " " $4}') #Date of last edit to script
@@ -104,7 +104,7 @@ if [ ! -f "$SESSION" ] ; then
 else cat "$SESSION" | sed '/.*".*"/d' && cat "$SESSION" | sed '/.*".*"/d' > $LOGFILE
 fi
 #
-tshark -i $IFACE -n -l -f "subtype probereq" -T fields -e wlan.sa -e radiotap.dbm_antsignal -e wlan_mgt.ssid -E quote=d 2> /dev/null > "$TMPFILE" &\
+tshark -i $IFACE -n -l -f "subtype probereq" -T fields -e wlan.sa -e radiotap.dbm_antsignal -e wlan.ssid -E quote=d 2> /dev/null > "$TMPFILE" &\
 tail -f $TMPFILE | while read line ; do 
 	TIME=$(date +"%d-%m %H:%M:%S")
 	MAC=$(echo $line | cut -d \" -f 2  | tr '[:lower:]' '[:upper:]')
@@ -177,16 +177,16 @@ echo $BLU">$STD Wireless Interface(s)"
 echo $STD
 AC_VERS=$(airmon-ng | sed '/^$/d' | head -n 1 | cut -f 1)
 if  [ "$AC_VERS" == "PHY" ] ; then
-IFACES=$(airmon-ng | sed -e '0,/Interface/d' -e '/^$/d' | cut -f 2)
+	IFACES=$(airmon-ng | sed -e '0,/Interface/d' -e '/^$/d' | cut -f 2)
 elif [ "$AC_VERS" == "Interface" ]  ; then
-IFACES=$(airmon-ng | sed -e '0,/Interface/d' -e '/^$/d' | cut -f 1)
+	IFACES=$(airmon-ng | sed -e '0,/Interface/d' -e '/^$/d' | cut -f 1)
 fi
 echo -e $BLUN"IFACE\t\tMAC ADDRESS\t\tSTATUS"
 echo -e "-----\t\t-----------\t\t------"$STD
 for i in $IFACES ; do
-MAC=$(ifconfig $i | head -n 1 | sed 's/.*HWaddr //' | cut -c 1-17 | tr '[:lower:]' '[:upper:]' | sed 's/-/:/g')
+MAC=$(iw dev $i info | grep addr | sed 's/^.*addr //' | tr '[:lower:]' '[:upper:]' | sed 's/-/:/g')
 MODE=$(iwconfig $i | grep -o Mode:.* |  awk '{print $1}')
-STATUS=$(ifconfig $i |  awk -F' ' '{ print $1 }' | grep -io up)
+STATUS=$(ifconfig $i |  head -n 1 | grep -io up)
 if [ "$STATUS" != "UP" ] ; then STATUS=DOWN ; fi
 printf '%-15s %-23s %-4s %-5s\n' "$i" "$MAC" "$STATUS" "($MODE)"
 done
@@ -284,7 +284,7 @@ f_target_mac() {
 	if [ ! -f "$TMPFILE" ] ; then touch "$TMPFILE" ; fi
 f_header
 echo $BLU">$STD Listening for target MAC $GRN$TARGET_MAC$STD"
-tshark -i $IFACE -n -l -f "subtype probereq" -T fields -e wlan.sa -e radiotap.dbm_antsignal -e wlan_mgt.ssid -E quote=d 2> /dev/null > $TMPFILE &\
+tshark -i $IFACE -n -l -f "subtype probereq" -T fields -e wlan.sa -e radiotap.dbm_antsignal -e wlan.ssid -E quote=d 2> /dev/null > $TMPFILE &\
 tail -f $TMPFILE | while read line ; do 
 MAC=$(echo $line | cut -d \" -f 2  | tr '[:lower:]' '[:upper:]')
 PWR=$(echo $line | cut -d \" -f 4)
@@ -314,7 +314,7 @@ clear
 if [ ! -f "$TMPFILE" ] ; then touch "$TMPFILE" ; fi
 f_header
 echo -e $BLU">$STD Listening for probed essid '$GRN$TARGET_ESSID$STD'"
-tshark -i $IFACE -n -l -f "subtype probereq" -T fields -e wlan.sa -e radiotap.dbm_antsignal -e wlan_mgt.ssid -E quote=d 2> /dev/null > "$TMPFILE" &\
+tshark -i $IFACE -n -l -f "subtype probereq" -T fields -e wlan.sa -e radiotap.dbm_antsignal -e wlan.ssid -E quote=d 2> /dev/null > "$TMPFILE" &\
 tail -f $TMPFILE | while read line ; do 
 MAC=$(echo $line | cut -d \" -f 2  | tr '[:lower:]' '[:upper:]')
 PWR=$(echo $line | cut -d \" -f 4)
@@ -349,7 +349,7 @@ printf '%-20s %-17s %-8s %-15s %-10s\n' "DATE / TIME"	"MAC ADDRESS" "POWER" "ESS
 printf '%-17s %-20s %-8s %-15s %-10s\n' "--------------" "-----------------" "-----" "-----" "-----------"
 if [[ "$LOG" == "TRUE" ]] && [[ "$SESSION_RESUME" == "TRUE" ]] ; then cp "$SESSION" "$LOGFILE" ; fi
 if  [[ "$UNIQUE" == "TRUE" ]]  && [[ "$SESSION_RESUME" == "TRUE" ]] ; then cat $SESSION | sed '/.*".*"/d' ; fi
-tshark -i $IFACE -n -l -f "subtype probereq" -T fields -e wlan.sa -e radiotap.dbm_antsignal -e wlan_mgt.ssid -E quote=d 2> /dev/null > "$TMPFILE" &\
+tshark -i $IFACE -n -l -f "subtype probereq" -T fields -e wlan.sa -e radiotap.dbm_antsignal -e wlan.ssid -E quote=d 2> /dev/null > "$TMPFILE" &\
 tail -f $TMPFILE | while read line ; do 
 TIME=$(date +"%d-%m %H:%M:%S")
 MAC=$(echo $line | cut -d \" -f 2  | tr '[:lower:]' '[:upper:]')
@@ -418,7 +418,7 @@ echo $BLU">$STD Alert on clients not in whitelist"
 echo ""
 printf '%-20s %-17s %-8s %-15s %-10s\n' "DATE / TIME"	"MAC ADDRESS" "POWER" "ESSID" "VENDOR INFO"
 printf '%-17s %-20s %-8s %-15s %-10s\n' "--------------" "-----------------" "-----" "-----" "-----------"
-tshark -i $IFACE -n -l -f "subtype probereq" -T fields -e wlan.sa -e radiotap.dbm_antsignal -e wlan_mgt.ssid -E quote=d 2> /dev/null > "$TMPFILE" &\
+tshark -i $IFACE -n -l -f "subtype probereq" -T fields -e wlan.sa -e radiotap.dbm_antsignal -e wlan.ssid -E quote=d 2> /dev/null > "$TMPFILE" &\
 tail -f $TMPFILE | while read line ; do 
 MAC=$(echo $line | cut -d \" -f 2  | tr '[:lower:]' '[:upper:]')
 MAC_OUI=$(echo "$MAC" | cut -c 1-8 | sed 's/:/-/g')
@@ -483,7 +483,7 @@ echo $BLU">$STD Alert on clients in blacklist"
 echo ""
 printf '%-20s %-17s %-8s %-15s %-10s\n' "DATE / TIME"	"MAC ADDRESS" "POWER" "ESSID" "VENDOR INFO"
 printf '%-17s %-20s %-8s %-15s %-10s\n' "--------------" "-----------------" "-----" "-----" "-----------"
-tshark -i $IFACE -n -l -f "subtype probereq" -T fields -e wlan.sa -e radiotap.dbm_antsignal -e wlan_mgt.ssid -E quote=d 2> /dev/null > "$TMPFILE" &\
+tshark -i $IFACE -n -l -f "subtype probereq" -T fields -e wlan.sa -e radiotap.dbm_antsignal -e wlan.ssid -E quote=d 2> /dev/null > "$TMPFILE" &\
 tail -f $TMPFILE | while read line ; do 
 MAC=$(echo $line | cut -d \" -f 2  | tr '[:lower:]' '[:upper:]')
 MAC_OUI=$(echo "$MAC" | cut -c 1-8 | sed 's/:/-/g')
@@ -748,7 +748,11 @@ exit  0
 # - Updated whitelist mode to mimic the same possibilities / output as the normal scan function.
 # - Updated blacklist mode to mimic the same possibilities / output as the normal scan function.
 # - Small edits to text / descriptions
-
+#
+# v0.6 released 10-05-2018
+# - Updated the tshark command to the correct wlan.ssid instead of wlan_mgt.ssid following a change.
+# - Updated the method of checking MAC address to compensate for changes in ifconfig output by using iw dev
+# - Update the method of checking whether interface is up or down following changes in ifconfig output.
 #
 #
 # To Do List;
@@ -758,5 +762,3 @@ exit  0
 # - include 'first seen / last seen' when using -M3 ?
 # - alter -M1 -M2 outputs to show a history of signal strength for better 'tracking' ?
 # - catsmash logs; cat *_shee.log > log.txt | awk -F"," '!_[$3]++'
-#
-# Help me out here, any input is good, I need more to keep the motivation ON :D
